@@ -1,0 +1,311 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Purchase Advisor | FreshFirst</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f7f3;
+            color: #26352b;
+        }
+
+        header {
+            background: #246b45;
+            color: white;
+            padding: 25px 7%;
+        }
+
+        header h1 { margin: 0; }
+
+        header p { margin-bottom: 0; }
+
+        main {
+            max-width: 850px;
+            margin: 30px auto;
+            padding: 0 18px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 14px;
+            padding: 25px;
+            margin-bottom: 22px;
+            box-shadow: 0 3px 14px #0000000b;
+        }
+
+        h2 { color: #246b45; margin-top: 0; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d4ded6;
+            border-radius: 7px;
+            font-size: 15px;
+            background: white;
+        }
+
+        button, .back-link {
+            display: inline-block;
+            border: none;
+            border-radius: 7px;
+            padding: 12px 17px;
+            background: #28794b;
+            color: white;
+            font-size: 15px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        button:hover, .back-link:hover { opacity: 0.88; }
+
+        .submit-row { margin-top: 20px; }
+
+        .error {
+            background: #fff0ed;
+            color: #a52e20;
+            border-left: 4px solid #c84b3b;
+            border-radius: 7px;
+            padding: 13px;
+            margin-bottom: 18px;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 13px;
+            margin: 20px 0;
+        }
+
+        .result-card {
+            padding: 17px;
+            background: #f0f7f1;
+            border-radius: 10px;
+        }
+
+        .result-card p {
+            margin: 0 0 10px;
+            color: #647267;
+            font-size: 14px;
+        }
+
+        .result-card h3 {
+            margin: 0;
+            color: #246b45;
+            font-size: 23px;
+            overflow-wrap: anywhere;
+        }
+
+        .recommendation {
+            background: #e8f5e9;
+            border-left: 5px solid #32975a;
+            padding: 18px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .recommendation h3 {
+            margin-top: 0;
+            color: #246b45;
+        }
+
+        .note {
+            color: #68766c;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        footer {
+            text-align: center;
+            padding: 22px;
+            color: #68766c;
+        }
+
+        @media (max-width: 550px) {
+            .panel { padding: 18px; }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>FreshFirst</h1>
+    <p>Smart Purchase Quantity Advisor</p>
+</header>
+
+<main>
+    <section class="panel">
+        <h2>🛒 Plan Your Food Purchase</h2>
+
+        <p>
+            Enter your household's expected food usage to estimate
+            how much more you need to buy.
+        </p>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form action="{{ url_for('purchase_advisor') }}" method="POST">
+            <div class="form-grid">
+                <div>
+                    <label for="food_name">Food Name</label>
+                    <input id="food_name" name="food_name"
+                           placeholder="e.g. Milk" required>
+                </div>
+
+                <div>
+                    <label for="unit">Measurement Unit</label>
+                    <select id="unit" name="unit" required>
+                        <option value="litres">Litres</option>
+                        <option value="kg">Kilograms (kg)</option>
+                        <option value="g">Grams (g)</option>
+                        <option value="ml">Millilitres (ml)</option>
+                        <option value="pieces">Pieces</option>
+                        <option value="packets">Packets</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="family_size">Number of Family Members</label>
+                    <input id="family_size" name="family_size"
+                           type="number" min="1" max="100"
+                           value="4" required>
+                </div>
+
+                <div>
+                    <label for="weekly_usage">
+                        Usage per Person per Week
+                    </label>
+                    <input id="weekly_usage" name="weekly_usage"
+                           type="number" min="0.01" max="100000"
+                           step="any" placeholder="e.g. 0.5" required>
+                </div>
+
+                <div>
+                   
+
+<label for="planning_days">Planning Period (Days)</label>
+<input
+    type="number"
+    id="planning_days"
+    name="planning_days"
+    min="1"
+    max="90"
+    step="1"
+    placeholder="Enter number of days (e.g. 2 or 4)"
+    required
+>
+
+
+                </div>
+            </div>
+
+            <div class="submit-row">
+                <button type="submit">Calculate Purchase Quantity</button>
+            </div>
+        </form>
+    </section>
+
+    {% if result %}
+        <section class="panel">
+            <h2>📊 Your Purchase Recommendation</h2>
+
+            <p>
+                Food:
+                <strong>{{ result.food_name }}</strong>
+            </p>
+
+            <div class="result-grid">
+                <div class="result-card">
+                    <p>Estimated Requirement</p>
+                    <h3>{{ "%.2f"|format(result.required_quantity) }}
+                        {{ result.unit }}</h3>
+                </div>
+
+                <div class="result-card">
+                    <p>Available Stock</p>
+                    <h3>{{ "%.2f"|format(result.available_stock) }}
+                        {{ result.unit }}</h3>
+                </div>
+
+                <div class="result-card">
+                    <p>Additional Quantity Needed</p>
+                    <h3>{{ "%.2f"|format(result.recommended_quantity) }}
+                        {{ result.unit }}</h3>
+                </div>
+            </div>
+
+            <div class="recommendation">
+                <h3>Recommended Purchase</h3>
+
+                {% if result.recommended_quantity > 0 %}
+                    Based on your estimated usage and available stock,
+                    consider buying
+                    <strong>
+                        {{ "%.2f"|format(result.recommended_quantity) }}
+                        {{ result.unit }}
+                    </strong>
+                    of {{ result.food_name }} for the selected period.
+                {% else %}
+                    You already have enough recorded stock for the
+                    selected period. You do not need to buy more
+                    according to these estimates.
+                {% endif %}
+            </div>
+
+            <p class="note">
+                Calculation:
+                household members × usage per person per week ×
+                planning days ÷ 7, minus matching available stock.
+                This is an estimate based on the values you entered.
+            </p>
+        </section>
+    {% endif %}
+
+    <section class="panel">
+        <h2>How to use this feature</h2>
+        <ol>
+            <li>Enter the food name exactly as it appears in your inventory.</li>
+            <li>Select the same unit used when adding that food.</li>
+            <li>Enter the estimated weekly usage for one person.</li>
+            <li>Select your planning period and calculate.</li>
+        </ol>
+
+        <p class="note">
+            Only available inventory with a matching food name and unit
+            is included. Enter realistic usage estimates for better results.
+        </p>
+
+        <a class="back-link" href="{{ url_for('index') }}">
+            ← Back to FreshFirst Dashboard
+        </a>
+    </section>
+</main>
+
+<footer>
+    FreshFirst — Buy Smart, Store Smart, Waste Less.
+</footer>
+
+</body>
+</html>

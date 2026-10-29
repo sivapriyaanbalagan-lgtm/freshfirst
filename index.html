@@ -1,0 +1,551 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreshFirst | Food Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        .advisor-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #287a52;
+            color: white;
+            padding: 13px 20px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 12px 0 22px;
+            transition: 0.2s;
+        }
+
+        .advisor-link:hover {
+            background: #1e6040;
+            transform: translateY(-2px);
+        }
+
+        .budget-panel,
+        .analytics-section {
+            background: white;
+            border-radius: 16px;
+            padding: 22px;
+            margin: 22px 0;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+        }
+
+        .budget-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .budget-form input {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px;
+            border: 1px solid #d8e2da;
+            border-radius: 8px;
+        }
+
+        .budget-form button {
+            padding: 12px 18px;
+            background: #287a52;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .budget-progress {
+            height: 12px;
+            background: #e7eee9;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .budget-progress-fill {
+            height: 100%;
+            width: 0;
+            background: #46a875;
+            border-radius: 10px;
+        }
+
+        .analytics-card,
+        .waste-row {
+            background: #f7faf7;
+            padding: 14px;
+            margin: 10px 0;
+            border-radius: 10px;
+        }
+
+        .analytics-card p {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 6px 0;
+        }
+
+        .waste-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .waste-row p {
+            margin: 5px 0 0;
+            color: #66756a;
+        }
+
+        .waste-tip {
+            background: #edf7ef;
+            padding: 16px;
+            border-radius: 10px;
+            margin-top: 16px;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .message.success {
+            background: #e7f7eb;
+            color: #21643b;
+        }
+
+        .message.error {
+            background: #fff0ed;
+            color: #a52a20;
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="topbar">
+    <a href="{{ url_for('index') }}" class="brand">
+        <span class="brand-icon">✿</span>
+        FreshFirst
+    </a>
+    <span class="tagline">Less waste. More savings.</span>
+</header>
+
+<main class="container">
+
+    <section class="welcome">
+        <div>
+            <p class="eyebrow">YOUR SMART KITCHEN COMPANION</p>
+            <h1>Good food deserves<br>a good plan.</h1>
+            <p class="subtitle">
+                Manage your food, plan ahead and reduce household waste.
+            </p>
+        </div>
+        <div class="welcome-icon">🥑</div>
+    </section>
+
+    <!-- SMART PURCHASE ADVISOR NAVIGATION -->
+    <div>
+        <a href="{{ url_for('purchase_advisor') }}" class="advisor-link">
+            🛒 Smart Purchase Advisor →
+        </a>
+    </div>
+
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="message {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- DASHBOARD COUNTS -->
+    <section class="stats">
+
+        <article class="stat-card">
+            <span class="stat-icon">🧺</span>
+            <p>Available items</p>
+            <h2>{{ total }}</h2>
+        </article>
+
+        <article class="stat-card warning-card">
+            <span class="stat-icon">⏳</span>
+            <p>Expiring in 3 days</p>
+            <h2>{{ expiring }}</h2>
+        </article>
+
+        <article class="stat-card danger-card">
+            <span class="stat-icon">⚠️</span>
+            <p>Past expiry date</p>
+            <h2>{{ expired }}</h2>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-icon">💰</span>
+            <p>Recorded waste cost</p>
+            <h2>₹{{ "%.2f"|format(wasted_cost) }}</h2>
+        </article>
+
+    </section>
+
+    <!-- MONTHLY BUDGET -->
+    <section class="budget-panel">
+        <p class="eyebrow">MONEY MANAGEMENT</p>
+        <h2>💳 Monthly Food Budget</h2>
+
+        <form action="{{ url_for('set_budget') }}"
+              method="POST" class="budget-form">
+
+            <input type="number"
+                   name="budget_amount"
+                   min="0.01"
+                   step="0.01"
+                   placeholder="Enter monthly budget (₹)"
+                   value="{{ budget if budget > 0 else '' }}"
+                   required>
+
+            <button type="submit">Save Budget</button>
+        </form>
+
+        <p>Monthly budget:
+            <strong>₹{{ "%.2f"|format(budget) }}</strong>
+        </p>
+
+        <p>Recorded purchases:
+            <strong>₹{{ "%.2f"|format(monthly_spending) }}</strong>
+        </p>
+
+        <p>Remaining budget:
+            <strong>₹{{ "%.2f"|format(remaining_budget) }}</strong>
+        </p>
+
+        <div class="budget-progress">
+            <div class="budget-progress-fill"
+                 data-budget="{{ budget_percentage }}"></div>
+        </div>
+
+        <p>{{ budget_tip }}</p>
+    </section>
+
+    <!-- ADD FOOD AND INVENTORY -->
+    <div class="content-grid">
+
+        <section class="panel">
+
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">YOUR PANTRY</p>
+                    <h2>Add food item</h2>
+                </div>
+                <span class="heading-icon">＋</span>
+            </div>
+
+            <form action="{{ url_for('add_item') }}" method="POST">
+
+                <label for="name">Food item name *</label>
+                <input id="name" name="name" type="text"
+                       placeholder="e.g. Milk" maxlength="100" required>
+
+                <div class="form-row">
+                    <div>
+                        <label for="category">Category *</label>
+                        <select id="category" name="category" required>
+                            <option value="">Select category</option>
+                            <option>Fruits</option>
+                            <option>Vegetables</option>
+                            <option>Dairy</option>
+                            <option>Grains</option>
+                            <option>Meat & Fish</option>
+                            <option>Snacks</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="quantity">Quantity *</label>
+                        <input id="quantity" name="quantity"
+                               type="number" min="0.01" step="any"
+                               placeholder="e.g. 2" required>
+                    </div>
+                </div>
+
+                <label for="unit">Unit *</label>
+                <select id="unit" name="unit" required>
+                    <option value="">Select unit</option>
+                    <option>kg</option>
+                    <option>g</option>
+                    <option>litre</option>
+                    <option>ml</option>
+                    <option>pieces</option>
+                    <option>packets</option>
+                </select>
+
+                <label for="purchase_date">Purchase date *</label>
+                <input id="purchase_date" name="purchase_date"
+                       type="date" max="{{ today }}"
+                       value="{{ today }}" required>
+
+                <label for="expiry_date">Expiry / use-by date *</label>
+                <input id="expiry_date" name="expiry_date"
+                       type="date" required>
+
+                <label for="price">Total purchase cost (₹) *</label>
+                <input id="price" name="price" type="number"
+                       min="0" step="0.01" value="0" required>
+
+                <button type="submit" class="primary-button">
+                    + Add to inventory
+                </button>
+
+            </form>
+        </section>
+
+        <!-- FOOD INVENTORY -->
+        <section class="panel inventory-panel">
+
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">LIVE INVENTORY</p>
+                    <h2>Your food items</h2>
+                </div>
+                <span class="inventory-count">{{ total }} items</span>
+            </div>
+
+            {% if items %}
+                <div class="food-list">
+
+                    {% for item in items %}
+                        <article class="food-item">
+                            <div class="food-details">
+
+                                <div class="food-title-row">
+                                    <h3>{{ item.name }}</h3>
+
+                                    <span class="status {% if item.days_left is not none and item.days_left < 0 %}status-danger{% elif item.days_left is not none and item.days_left <= 3 %}status-warning{% else %}status-good{% endif %}">
+
+                                        {% if item.days_left is none %}
+                                            Check date
+                                        {% elif item.days_left < 0 %}
+                                            Past expiry
+                                        {% elif item.days_left == 0 %}
+                                            Expires today
+                                        {% elif item.days_left <= 3 %}
+                                            Use soon
+                                        {% else %}
+                                            In stock
+                                        {% endif %}
+
+                                    </span>
+                                </div>
+
+                                <p class="food-meta">
+                                    {{ item.category }} ·
+                                    {{ "%g"|format(item.quantity) }}
+                                    {{ item.unit }}
+                                </p>
+
+                                <p class="recommendation">
+                                    <strong>FreshFirst tip:</strong>
+                                    {{ item.recommendation }}
+                                </p>
+
+                                <p class="food-price">
+                                    Purchase cost:
+                                    ₹{{ "%.2f"|format(item.price) }}
+                                </p>
+
+                                <div class="actions">
+
+                                    <form action="{{ url_for('mark_wasted', item_id=item.id) }}"
+                                          method="POST">
+                                        <button type="submit"
+                                                class="text-button"
+                                                onclick="return confirm('Record this item as wasted?')">
+                                            Record waste
+                                        </button>
+                                    </form>
+
+                                    <form action="{{ url_for('delete_item', item_id=item.id) }}"
+                                          method="POST">
+                                        <button type="submit"
+                                                class="text-button delete-button"
+                                                onclick="return confirm('Delete this item?')">
+                                            Delete
+                                        </button>
+                                    </form>
+
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+                <div class="empty-state">
+                    <div>🥕</div>
+                    <h3>Your pantry is ready!</h3>
+                    <p>Add your first food item using the form.</p>
+                </div>
+            {% endif %}
+
+            <div class="note">
+                <strong>Food safety reminder</strong>
+                <p>
+                    Dates are reminders, not a guarantee of safety.
+                    Follow storage instructions and check for signs of
+                    spoilage. Never taste food to test whether it is safe.
+                </p>
+            </div>
+
+        </section>
+    </div>
+
+<!-- SMART FOOD WASTE ALERT -->
+<section class="analytics-section">
+    <h2>🔔 Smart Food Waste Alerts</h2>
+    <p>Check which food items need your attention first.</p>
+
+    {% set expiring_items = items | selectattr('days_left', 'le', 3) | selectattr('days_left', 'ge', 0) | list %}
+    {% set expired_items = items | selectattr('days_left', 'lt', 0) | list %}
+
+    <div class="analytics-card">
+        <h3>⏳ Expiring Within 3 Days</h3>
+
+        {% if expiring_items %}
+            {% for item in expiring_items | sort(attribute='days_left') %}
+                <div class="waste-row">
+                    <div>
+                        <strong>{{ item.name }}</strong>
+                        <p>
+                            Quantity: {{ "%g"|format(item.quantity) }}
+                            {{ item.unit }}
+                        </p>
+                        {% if item.days_left == 0 %}
+                            <p>Expiry date is today.</p>
+                        {% elif item.days_left == 1 %}
+                            <p>Expires tomorrow.</p>
+                        {% else %}
+                            <p>Expires in {{ item.days_left }} days.</p>
+                        {% endif %}
+                    </div>
+                    <strong>Use first</strong>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Great! No food is expiring within the next 3 days.</p>
+        {% endif %}
+    </div>
+
+    <div class="analytics-card">
+        <h3>⚠️ Past Expiry Date</h3>
+
+        {% if expired_items %}
+            {% for item in expired_items | sort(attribute='days_left') %}
+                <div class="waste-row">
+                    <div>
+                        <strong>{{ item.name }}</strong>
+                        <p>Expiry date has passed.</p>
+                    </div>
+                    <strong>Check carefully</strong>
+                </div>
+            {% endfor %}
+            <p>Follow food safety guidance. Do not consume food just to avoid waste.</p>
+        {% else %}
+            <p>No items have passed their expiry date.</p>
+        {% endif %}
+    </div>
+
+    <div class="waste-tip">
+        <h3>💡 Waste Prevention Tip</h3>
+        <p>Use food with the nearest expiry date first, plan meals around available ingredients, and store food according to its label.</p>
+    </div>
+</section>
+
+    <!-- FOOD WASTE ANALYTICS -->
+    <section class="analytics-section">
+
+        <h2>📊 Food Waste Analytics</h2>
+
+        <div class="analytics-card">
+            <h3>Wasted Items</h3>
+            <p>{{ wasted_count }}</p>
+        </div>
+
+        <div class="analytics-card">
+            <h3>Total Waste Cost</h3>
+            <p>₹{{ "%.2f"|format(wasted_cost) }}</p>
+        </div>
+
+        <h3>Category-wise Waste</h3>
+
+        {% if waste_by_category %}
+            {% for category in waste_by_category %}
+                <div class="waste-row">
+                    <div>
+                        <strong>{{ category.category }}</strong>
+                        <p>{{ category.item_count }} wasted item(s)</p>
+                    </div>
+                    <strong>
+                        ₹{{ "%.2f"|format(category.total_cost) }}
+                    </strong>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>
+                No food waste recorded yet. Use Record Waste to start tracking.
+            </p>
+        {% endif %}
+
+        <div class="waste-tip">
+            <h3>Waste Reduction Suggestion</h3>
+            <p>{{ waste_tip }}</p>
+        </div>
+
+    </section>
+
+    <!-- MONTHLY WASTE REPORT -->
+    <section class="analytics-section">
+
+        <h2>📅 Monthly Food Waste Report</h2>
+
+        {% if monthly_waste %}
+            {% for month in monthly_waste %}
+                <div class="waste-row">
+                    <div>
+                        <strong>{{ month.month }}</strong>
+                        <p>{{ month.item_count }} wasted item(s)</p>
+                    </div>
+                    <strong>
+                        ₹{{ "%.2f"|format(month.total_cost) }}
+                    </strong>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No monthly waste records available yet.</p>
+        {% endif %}
+
+    </section>
+
+    <footer>
+        FreshFirst · A smarter way to manage household food.
+    </footer>
+
+</main>
+
+<script>
+    document.querySelectorAll(".budget-progress-fill").forEach(function (bar) {
+        const value = Number(bar.dataset.budget) || 0;
+        const safeValue = Math.max(0, Math.min(value, 100));
+        bar.style.width = safeValue + "%";
+    });
+</script>
+
+</body>
+</html>
